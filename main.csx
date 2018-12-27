@@ -66,15 +66,14 @@ public static async Task UploadToAzure(string content) {
     var storageAccount = CloudStorageAccount.Parse("DefaultEndpointsProtocol=https;AccountName=getexchangerates;AccountKey=wkZK4HH0JWrYGErvDfywg9x309Eo8JL4aK/FJZNecfFuW9D5TPMo3TkhFbcV09/aPuwQr5lNzKBxjDY7eN2bCA==;EndpointSuffix=core.windows.net");
     var client = storageAccount.CreateCloudBlobClient();
     var container = client.GetContainerReference("exchangerates");
-    var blob = container.GetBlockBlobReference("currencies.txt");
+    var blob = container.GetBlockBlobReference("XcgRates.txt");
     await blob.UploadTextAsync(content);
 }
 
 
 try {
     var currencyInfo = await GetCurrencyInfo();
-    Console.WriteLine(currencyInfo);
-    // await UploadToAzure(currencyInfo);
+    await UploadToAzure(currencyInfo);
 } catch (Exception e) {
     Console.WriteLine($"Oops, something bad happened:\n{e}");
 }
