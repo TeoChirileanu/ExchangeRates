@@ -6,7 +6,7 @@ using System.Net.Http;
 using System.Threading.Tasks;
 using Newtonsoft.Json.Linq;
 using Microsoft.WindowsAzure.Storage;
-using Microsoft.WindowsAzure.Storage.File; 
+using Microsoft.WindowsAzure.Storage.Blob; 
 
 public enum Multiplicator { ByOne = 1, ByHundred = 100 }
 
@@ -15,7 +15,7 @@ public class Currency {
     public Multiplicator Multiplicator {get; set;}
     public decimal ExchangeRate {get; set;}
 
-    public override string ToString() => $"{CurrencyName}\t{Multiplicator:D}\t{ExchangeRate:0.####}";
+    public override string ToString() => $"{CurrencyName}\t\t{Multiplicator:D}\t\t{ExchangeRate:0.####}";
 }
 
 public class CurrencyInfo {
@@ -63,14 +63,18 @@ public static bool IsSpecialCurrency(this string currency) =>
     specialCurrencies.Contains(currency) ? true : false;
 
 public static async Task UploadToAzure(string content) {
-    CloudStorageAccount storageAccount = CloudStorageAccount.Parse("DefaultEndpointsProtocol=https;AccountName=getexchangerates;AccountKey=wkZK4HH0JWrYGErvDfywg9x309Eo8JL4aK/FJZNecfFuW9D5TPMo3TkhFbcV09/aPuwQr5lNzKBxjDY7eN2bCA==;EndpointSuffix=core.windows.net");
-    var cloudFile = new CloudFile(new Uri("https://getexchangerates.file.core.windows.net/rates/CurrencyInfo.txt"), storageAccount.Credentials);
-    await cloudFile.UploadTextAsync(content);
+    var storageAccount = CloudStorageAccount.Parse("DefaultEndpointsProtocol=https;AccountName=getexchangerates;AccountKey=wkZK4HH0JWrYGErvDfywg9x309Eo8JL4aK/FJZNecfFuW9D5TPMo3TkhFbcV09/aPuwQr5lNzKBxjDY7eN2bCA==;EndpointSuffix=core.windows.net");
+    var client = storageAccount.CreateCloudBlobClient();
+    var container = client.GetContainerReference("exchangerates");
+    var blob = container.GetBlockBlobReference("currencies.txt");
+    await blob.UploadTextAsync(content);
 }
+
 
 try {
     var currencyInfo = await GetCurrencyInfo();
-    await UploadToAzure(currencyInfo);
+    Console.WriteLine(currencyInfo);
+    // await UploadToAzure(currencyInfo);
 } catch (Exception e) {
     Console.WriteLine($"Oops, something bad happened:\n{e}");
 }
