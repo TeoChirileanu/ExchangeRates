@@ -15,7 +15,7 @@ public class Currency {
     public Multiplicator Multiplicator {get; set;}
     public decimal ExchangeRate {get; set;}
 
-    public override string ToString() => $"{CurrencyName}\t\t{Multiplicator:D}\t\t{ExchangeRate:0.####}";
+    public override string ToString() => $"{CurrencyName}\t{Multiplicator:D}\t{ExchangeRate:0.####}";
 }
 
 public class CurrencyInfo {
