@@ -43,8 +43,8 @@ public async Task<string> GetProperlyFormatedCurrencies() {
     var currencies = exchangeRates.Select(x => new Currency {
         CurrencyName = x.Key,
         Multiplicator = x.Key.IsSpecialCurrency()
-            ? Multiplicator.ByOne
-            : Multiplicator.ByHundred,
+            ? Multiplicator.ByHundred
+            : Multiplicator.ByOne,
         ExchangeRate = x.Key.IsSpecialCurrency()
             ? 100 * (decimal) x.Value
             : (decimal) x.Value
