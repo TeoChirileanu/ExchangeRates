@@ -18,19 +18,29 @@ public class Currency {
     public override string ToString() => $"{CurrencyName}\t{Multiplicator:D}\t{ExchangeRate:0.####}";
 }
 
-public async Task<JObject> GetCurrencyInfo() {
+public class CurrencyInfo {
+    public IEnumerable<Currency> Currencies {get; set;}
+    public DateTime ExchangeRateDate {get; set;}
+
+    public override string ToString() {
+        var header = "Currency\tMultiplicator\tExchange Rate";
+        var currenciesAsString = string.Join("\n", Currencies);
+        return $"{header}\n{currenciesAsString}\nExchange Rates for {ExchangeRateDate.ToString("dd-MM-yyyy")}";
+    }
+}
+
+public async Task<JObject> GetExchangeRateInformation() {
     const string ExchangeUri = "https://api.openapi.ro/api/exchange/";
     const string ApiKey = "nzjYgxzZcvkBdkuPAFsF71LiTHqvPH9NqmmUYkdjdutwVGv8Rg";
     HttpClient client = new HttpClient();
     client.DefaultRequestHeaders.TryAddWithoutValidation("x-api-key", ApiKey);
     var jsonResponse = await client.GetStringAsync(ExchangeUri);
-    var currencyInfo = JObject.Parse(jsonResponse);
-    return currencyInfo;
+    return JObject.Parse(jsonResponse);
 }
 
-public async Task<string> GetProperlyFormatedCurrencies() {
-    var currencyInfo = await GetCurrencyInfo();
-    IDictionary<string, JToken> exchangeRates = currencyInfo["rates"] as JObject;
+public async Task<string> GetCurrencyInfo() {
+    var exchangeRateInformation = await GetExchangeRateInformation();
+    IDictionary<string, JToken> exchangeRates = exchangeRateInformation["rates"] as JObject;
     var currencies = exchangeRates.Select(x => new Currency {
         CurrencyName = x.Key,
         Multiplicator = x.Key.IsSpecialCurrency()
@@ -40,7 +50,12 @@ public async Task<string> GetProperlyFormatedCurrencies() {
             ? 100 * (decimal) x.Value
             : (decimal) x.Value
     });
-    return string.Join("\n", currencies);
+    var exchangeRateDate = DateTime.Parse(exchangeRateInformation["date"].ToString());
+    var currencyInfo = new CurrencyInfo {
+        Currencies = currencies,
+        ExchangeRateDate = exchangeRateDate
+    };
+    return currencyInfo.ToString();
 }
 
 static readonly string[] specialCurrencies = new [] { "HUF", "KRW", "JPY" };
@@ -54,7 +69,7 @@ public static async Task UploadToAzure(string content) {
 }
 
 try {
-    var currencyInfo = await GetProperlyFormatedCurrencies();
+    var currencyInfo = await GetCurrencyInfo();
     await UploadToAzure(currencyInfo);
 } catch (Exception e) {
     Console.WriteLine($"Oops, something bad happened:\n{e}");
