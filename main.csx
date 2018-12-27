@@ -1,9 +1,13 @@
 #r "nuget: Newtonsoft.Json, 12.0.1"
+#r "nuget: WindowsAzure.Storage, 9.3.3"
 
 using System;
 using System.Net.Http;
 using System.Threading.Tasks;
 using Newtonsoft.Json.Linq;
+using Microsoft.WindowsAzure.Storage;
+using Microsoft.WindowsAzure.Storage.Auth;
+using Microsoft.WindowsAzure.Storage.Blob; 
 
 public enum Multiplicator { ByOne = 1, ByHundred = 100 }
 
@@ -66,10 +70,20 @@ public static async Task WriteToFile(this string content, string pathToFile) {
     }
 }
 
+public static async Task UploadToAzure(this string file) {
+    CloudStorageAccount storageAccount = CloudStorageAccount.Parse("DefaultEndpointsProtocol=https;AccountName=getexchangerates;AccountKey=wkZK4HH0JWrYGErvDfywg9x309Eo8JL4aK/FJZNecfFuW9D5TPMo3TkhFbcV09/aPuwQr5lNzKBxjDY7eN2bCA==;EndpointSuffix=core.windows.net");
+    CloudBlobClient blobClient = storageAccount.CreateCloudBlobClient();
+    CloudBlobContainer container = blobClient.GetContainerReference("exchangerates");
+    CloudBlockBlob blockBlob = container.GetBlockBlobReference("currencies.txt");
+    using (var fileStream = System.IO.File.OpenRead(file))
+        await blockBlob.UploadFromStreamAsync(fileStream);
+}
+
 try {
     var filePath = GetFilePath();
     var currencies = await GetProperlyFormatedCurrencies();
     await currencies.WriteToFile(filePath);
+    await filePath.UploadToAzure();
 } catch (Exception e) {
     Console.WriteLine($"Oops, something bad happened:\n{e}");
 }
