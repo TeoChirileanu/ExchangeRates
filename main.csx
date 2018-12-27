@@ -6,8 +6,7 @@ using System.Net.Http;
 using System.Threading.Tasks;
 using Newtonsoft.Json.Linq;
 using Microsoft.WindowsAzure.Storage;
-using Microsoft.WindowsAzure.Storage.Auth;
-using Microsoft.WindowsAzure.Storage.Blob; 
+using Microsoft.WindowsAzure.Storage.File; 
 
 public enum Multiplicator { ByOne = 1, ByHundred = 100 }
 
@@ -17,18 +16,6 @@ public class Currency {
     public decimal ExchangeRate {get; set;}
 
     public override string ToString() => $"{CurrencyName}\t{Multiplicator:D}\t{ExchangeRate:0.####}";
-}
-
-public string GetFilePath() {
-    string DefaultFilePath = Path.Join(Directory.GetCurrentDirectory(), "currencies.txt");
-    var filePath = string.Empty;
-    try {
-        filePath = Args[0];
-    } catch (Exception) {
-        Console.WriteLine($"No path provided, using default path {DefaultFilePath}");
-        filePath = DefaultFilePath;
-    }
-    return filePath;
 }
 
 public async Task<JObject> GetCurrencyInfo() {
@@ -60,30 +47,15 @@ static readonly string[] specialCurrencies = new [] { "HUF", "KRW", "JPY" };
 public static bool IsSpecialCurrency(this string currency) => 
     specialCurrencies.Contains(currency) ? true : false;
 
-public static async Task WriteToFile(this string content, string pathToFile) {
-    try {
-        using (var writer = new StreamWriter(pathToFile)) 
-            await writer.WriteAsync(content);
-    } catch (Exception e) {
-        Console.WriteLine($"Could not write to file:\n{e}");
-        throw;
-    }
-}
-
-public static async Task UploadToAzure(this string file) {
+public static async Task UploadToAzure(string content) {
     CloudStorageAccount storageAccount = CloudStorageAccount.Parse("DefaultEndpointsProtocol=https;AccountName=getexchangerates;AccountKey=wkZK4HH0JWrYGErvDfywg9x309Eo8JL4aK/FJZNecfFuW9D5TPMo3TkhFbcV09/aPuwQr5lNzKBxjDY7eN2bCA==;EndpointSuffix=core.windows.net");
-    CloudBlobClient blobClient = storageAccount.CreateCloudBlobClient();
-    CloudBlobContainer container = blobClient.GetContainerReference("exchangerates");
-    CloudBlockBlob blockBlob = container.GetBlockBlobReference("currencies.txt");
-    using (var fileStream = System.IO.File.OpenRead(file))
-        await blockBlob.UploadFromStreamAsync(fileStream);
+    var cloudFile = new CloudFile(new Uri("https://getexchangerates.file.core.windows.net/rates/CurrencyInfo.txt"), storageAccount.Credentials);
+    await cloudFile.UploadTextAsync(content);
 }
 
 try {
-    var filePath = GetFilePath();
-    var currencies = await GetProperlyFormatedCurrencies();
-    await currencies.WriteToFile(filePath);
-    await filePath.UploadToAzure();
+    var currencyInfo = await GetProperlyFormatedCurrencies();
+    await UploadToAzure(currencyInfo);
 } catch (Exception e) {
     Console.WriteLine($"Oops, something bad happened:\n{e}");
 }
